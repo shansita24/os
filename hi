@@ -1,3 +1,175 @@
+//syn
+#include<pthread.h>
+#include<stdio.h>
+#include<semaphore.h>
+#include<unistd.h> 
+void *fun1();
+ void *fun2();
+ int shared=1; //shared variable
+ sem_t s; //semaphore variable
+ int main()
+ {
+ sem_init(&s,0,1); //initialize semaphore variable - 1st argument is address of variable, 2nd is number of processes sharing semaphore, 3rd argument is the initial value of semaphore variable
+ pthread_t thread1, thread2;
+ pthread_create(&thread1, NULL, fun1, NULL);
+ pthread_create(&thread2, NULL, fun2, NULL);
+ pthread_join(thread1, NULL);
+ pthread_join(thread2,NULL);
+ printf("Final value of shared is %d\n",shared); //prints the last updated value of shared variable
+ }
+void *fun1()
+{
+    int x;
+    sem_wait(&s); //executes wait operation on s
+    x=shared;//thread1 reads value of shared variable
+    printf("Thread1 reads the value as %d\n",x);
+    x++;  //thread1 increments its value
+    printf("Local updation by Thread1: %d\n",x);
+    sleep(1); //thread1 is preempted by thread 2
+    shared=x; //thread one updates the value of shared variable
+    printf("Value of shared variable updated by Thread1 is: %d\n",shared);    
+    sem_post(&s);
+}
+void *fun2()
+{
+    int y;
+    sem_wait(&s);
+    y=shared;//thread2 reads value of shared variable
+    printf("Thread2 reads the value as %d\n",y);
+    y--;  //thread2 increments its value
+    printf("Local updation by Thread2: %d\n",y);
+    sleep(1); //thread2 is preempted by thread 1
+    shared=y; //thread2 updates the value of shared variable
+    printf("Value of shared variable updated by Thread2 is: %d\n",shared);
+    sem_post(&s);
+}
+
+//diner prob
+from threading import Semaphore
+
+# Initialize semaphores and counters
+entering_diners = Semaphore(0)
+exiting_diners = Semaphore(0)
+enter_done = Semaphore(0)
+exit_done = Semaphore(0)
+mutex_enter = Semaphore(1)
+mutex_exit = Semaphore(1)
+count_enter = 0
+count_exit = 0
+N = 5  # Number of diners the restaurant can hold
+
+# Restaurant Thread
+def restaurant_thread():
+    while True:
+        # Open front door
+        openFrontDoor()
+        
+        # Signal N diners to enter
+        for _ in range(N):
+            entering_diners.release()
+        
+        # Wait for all diners to enter
+        enter_done.acquire()
+        
+        # Close front door
+        closeFrontDoor()
+        
+        # Serve food
+        serveFood()
+        
+        # Open back door
+        openBackDoor()
+        
+        # Signal N diners to exit
+        for _ in range(N):
+            exiting_diners.release()
+        
+        # Wait for all diners to exit
+        exit_done.acquire()
+        
+        # Close back door
+        closeBackDoor()
+
+# Diner Thread
+def diner_thread():
+    # Wait for the front door to open
+    entering_diners.acquire()
+    
+    # Enter the restaurant
+    enterRestaurant()
+    
+    # Acquire mutex to update count_enter
+    mutex_enter.acquire()
+    count_enter += 1
+    if count_enter == N:
+        enter_done.release()
+        count_enter = 0
+    mutex_enter.release()
+    
+    # Eat
+    eat()
+    
+    # Wait for the back door to open
+    exiting_diners.acquire()
+    
+    # Exit the restaurant
+    exitRestaurant()
+    
+    # Acquire mutex to update count_exit
+    mutex_exit.acquire()
+    count_exit += 1
+    if count_exit == N:
+        exit_done.release()
+        count_exit = 0
+    mutex_exit.release()
+
+# Functions representing restaurant actions
+def openFrontDoor():
+    print("Front door opened")
+
+def closeFrontDoor():
+    print("Front door closed")
+
+def serveFood():
+    print("Food served")
+
+def openBackDoor():
+    print("Back door opened")
+
+def closeBackDoor():
+    print("Back door closed")
+
+# Functions representing diner actions
+def enterRestaurant():
+    print("Diner entered restaurant")
+
+def eat():
+    print("Diner is eating")
+
+def exitRestaurant():
+    print("Diner exited restaurant")
+
+# Test the threads
+import threading
+import time
+
+# Start the restaurant thread
+restaurant = threading.Thread(target=restaurant_thread)
+restaurant.start()
+
+# Start some diner threads
+diner_threads = []
+for i in range(10):  # Let's simulate 10 diners
+    diner = threading.Thread(target=diner_thread)
+    diner_threads.append(diner)
+    diner.start()
+
+# Join all threads
+restaurant.join()
+for diner in diner_threads:
+    diner.join()
+
+
 // Producer consumer prob
 
 #include <pthread.h>
